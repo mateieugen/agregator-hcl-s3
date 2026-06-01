@@ -1,3 +1,5 @@
+import re
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -29,18 +31,35 @@ def strip_html(html: str) -> str:
     return soup.get_text(separator=" ", strip=True)
 
 
-def html_to_readable(html: str) -> str:
+# Etichetă de vorbitor într-un proces-verbal: „Dl. Consilier X", „Dna. Savu Ileana",
+# „Dl. Președinte de ședință …", „Domnul Viceprimar …" etc.
+_SPEAKER_RE = re.compile(r"^(?:Dl|Dna|D-l|D-na|Dnul|Domnul|Doamna)\b\.?\s+\S")
+
+
+def _is_speaker(txt: str) -> bool:
+    if len(txt) > 90 or not _SPEAKER_RE.match(txt):
+        return False
+    # propozițiile (se termină cu punct și sunt lungi) nu sunt etichete de vorbitor
+    if txt.endswith(".") and len(txt) > 45:
+        return False
+    return True
+
+
+def html_to_readable(html: str, pv: bool = False) -> str:
     """Convertește HTML-ul documentului în HTML lizibil, cu rânduri strânse.
 
     Păstrează structura din hcl.usr.ro (titlu, paragraf, element de listă), fiecare
-    pe rândul lui, dar cu spațiere verticală mică între rânduri.
+    pe rândul lui, cu spațiere verticală mică.
+
+    La procese-verbale (`pv=True`), numele vorbitorului rămâne la margine (bold), iar
+    intervenția lui e indentată — ca să se vadă ușor cine a luat cuvântul.
     """
     if not html:
         return ""
     from html import escape
 
     soup = BeautifulSoup(html, "html.parser")
-    blocks = []
+    raw = []
     for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "p", "li", "tr"]):
         txt = el.get_text(" ", strip=True)
         if not txt:
@@ -48,10 +67,19 @@ def html_to_readable(html: str) -> str:
         # liniile-zgomot (numere de pagină din OCR: „9", „J", etc.)
         if len(txt) <= 2 and not txt[0].isalpha():
             continue
+        raw.append(txt)
+    if not raw:
+        raw = [l for l in soup.get_text("\n", strip=True).splitlines() if l.strip()]
+
+    rows = []
+    for txt in raw:
+        if pv and _is_speaker(txt):
+            rows.append(
+                f'<div style="font-weight:600;margin:12px 0 2px 0">{escape(txt)}</div>'
+            )
+            continue
         if txt.startswith("-"):
             txt = "– " + txt.lstrip("-").strip()
-        blocks.append(escape(txt))
-    if not blocks:
-        blocks = [escape(l) for l in soup.get_text("\n", strip=True).splitlines() if l.strip()]
-    rows = "".join(f'<div style="margin:0 0 4px 0">{b}</div>' for b in blocks)
-    return f'<div style="line-height:1.35">{rows}</div>'
+        indent = 24 if pv else 0
+        rows.append(f'<div style="margin:0 0 4px {indent}px">{escape(txt)}</div>')
+    return f'<div style="line-height:1.35">{"".join(rows)}</div>'

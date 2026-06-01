@@ -7,11 +7,11 @@ from db import init_db, search_fts, search_topic
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
-def load_readable(document_id: str) -> str:
+def load_readable(document_id: str, pv: bool = False) -> str:
     """Aduce documentul live de la hcl.usr.ro și-l formatează lizibil (cache pe sesiune)."""
     from fetcher import get_doc_html, html_to_readable
     try:
-        return html_to_readable(get_doc_html(document_id))
+        return html_to_readable(get_doc_html(document_id), pv=pv)
     except Exception:
         return ""
 
@@ -76,7 +76,7 @@ def render_results(results: list, prefix: str) -> None:
             deschis = not deschis
         if deschis:
             with st.spinner("Se încarcă documentul…"):
-                text = load_readable(doc_id)
+                text = load_readable(doc_id, pv=(r.get("tip_doc") == "PV"))
             # container cu înălțime fixă → scroll intern, pagina nu mai crește la nesfârșit
             with st.container(height=420, border=True):
                 st.markdown(text or "_(text indisponibil)_", unsafe_allow_html=True)
