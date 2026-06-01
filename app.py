@@ -69,12 +69,16 @@ def render_results(results: list, prefix: str) -> None:
         # Previzualizare „lazy": textul integral se aduce doar la click, doar pentru
         # documentul ales — ca să nu încărcăm pagina cu textul tuturor rezultatelor.
         state_key = f"show_{prefix}_{doc_id}"
-        if st.button("👁 Previzualizare text", key=f"btn_{prefix}_{doc_id}"):
-            st.session_state[state_key] = not st.session_state.get(state_key, False)
-        if st.session_state.get(state_key):
+        deschis = st.session_state.get(state_key, False)
+        eticheta_btn = "✖ Închide previzualizarea" if deschis else "👁 Previzualizare text"
+        if st.button(eticheta_btn, key=f"btn_{prefix}_{doc_id}"):
+            st.session_state[state_key] = not deschis
+            deschis = not deschis
+        if deschis:
             with st.spinner("Se încarcă documentul…"):
                 text = load_readable(doc_id)
-            with st.container(border=True):
+            # container cu înălțime fixă → scroll intern, pagina nu mai crește la nesfârșit
+            with st.container(height=420, border=True):
                 st.markdown(text or "_(text indisponibil)_", unsafe_allow_html=True)
         if url:
             st.markdown(f"[📄 PDF oficial]({url})")
