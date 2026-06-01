@@ -8,7 +8,9 @@ _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 # Obiectul real al hotărârii apare în text ca „HOTĂRÂRE privind ...", urmat de
 # preambul („Consiliul Local...", „Având în vedere...", etc.). Pentru ședințe
 # extragem antetul procesului-verbal.
-_OBIECT_RE = re.compile(r"HOT[ĂA]R[ÂA]RE\s+(privind\b.+)", re.IGNORECASE | re.DOTALL)
+# Obiectul = ce urmează după „HOTĂRÂRE" (de obicei „privind…", dar și „prin care
+# se solicită…", „pentru…" etc.) până la preambul.
+_OBIECT_RE = re.compile(r"HOT[ĂA]R[ÂA]RE\s+([A-Za-zĂÂÎȘȚăâîșț].+)", re.IGNORECASE | re.DOTALL)
 # Începutul preambulului (oprim titlul aici). Tolerăm erori OCR la „Consiliul"
 # (apare adesea „Consiliu]", „Consiliu1") și prindem și ancorele ulterioare.
 _PREAMBUL_RE = re.compile(
