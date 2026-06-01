@@ -105,7 +105,8 @@ with tab_free:
         render_results(search_fts(conn, query, tip=tip_free), prefix="free")
 
 with tab_topic:
-    st.markdown("Alege un topic predefinit — căutarea include automat toate alias-urile.")
+    st.markdown("Alege un topic predefinit din listă — căutarea include automat toate alias-urile.")
+    st.caption('Pentru o frază proprie (ex: cu ghilimele), folosește tab-ul **„Căutare liberă"**.')
     tip_topic = tip_selector("tip_topic")
     cur = conn.execute("SELECT nume FROM topicuri ORDER BY nume")
     topics = [row[0] for row in cur.fetchall()]
@@ -114,6 +115,11 @@ with tab_topic:
             "Niciun topic definit. Adaugă în `topics.yaml` și rulează `python ingest.py`."
         )
     else:
-        topic = st.selectbox("Topic:", topics)
+        topic = st.selectbox(
+            "Alege un topic:",
+            topics,
+            index=None,
+            placeholder="— alege un topic din listă —",
+        )
         if topic:
             render_results(search_topic(conn, topic, tip=tip_topic), prefix="topic")
