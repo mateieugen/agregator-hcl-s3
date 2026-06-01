@@ -110,13 +110,20 @@ def upsert_doc(conn: sqlite3.Connection, doc: dict) -> None:
 
 
 def search_fts(
-    conn: sqlite3.Connection, query: str, limit: int = 50, tip: str = "HCL"
+    conn: sqlite3.Connection, query: str, limit: int = 50, tip: str = "HCL",
+    an_min: int = None, an_max: int = None
 ) -> list:
     where = "hcl_fts MATCH ?"
     params = [query]
     if tip:
         where += " AND d.tip_doc = ?"
         params.append(tip)
+    if an_min is not None:
+        where += " AND d.an >= ?"
+        params.append(an_min)
+    if an_max is not None:
+        where += " AND d.an <= ?"
+        params.append(an_max)
     params.append(limit)
     try:
         cur = conn.execute(
@@ -138,7 +145,8 @@ def search_fts(
 
 
 def search_phrase(
-    conn: sqlite3.Connection, text: str, limit: int = 50, tip: str = "HCL"
+    conn: sqlite3.Connection, text: str, limit: int = 50, tip: str = "HCL",
+    an_min: int = None, an_max: int = None
 ) -> list:
     """Caută textul ca frază exactă (cuvintele lipite, în ordine).
 
@@ -149,7 +157,7 @@ def search_phrase(
     if not cleaned:
         return []
     phrase = '"' + cleaned.replace('"', '""') + '"'
-    return search_fts(conn, phrase, limit, tip=tip)
+    return search_fts(conn, phrase, limit, tip=tip, an_min=an_min, an_max=an_max)
 
 
 def get_text(conn: sqlite3.Connection, document_id: str) -> str:
@@ -162,7 +170,8 @@ def get_text(conn: sqlite3.Connection, document_id: str) -> str:
 
 
 def search_topic(
-    conn: sqlite3.Connection, topic_name: str, limit: int = 50, tip: str = "HCL"
+    conn: sqlite3.Connection, topic_name: str, limit: int = 50, tip: str = "HCL",
+    an_min: int = None, an_max: int = None
 ) -> list:
     cur = conn.execute(
         "SELECT aliasuri FROM topicuri WHERE lower(nume) = lower(?)",
@@ -174,7 +183,7 @@ def search_topic(
         terms.extend(json.loads(row[0]))
 
     fts_query = " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
-    return search_fts(conn, fts_query, limit, tip=tip)
+    return search_fts(conn, fts_query, limit, tip=tip, an_min=an_min, an_max=an_max)
 
 
 def load_topics(conn: sqlite3.Connection, yaml_path: str) -> int:

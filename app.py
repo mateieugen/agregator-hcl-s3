@@ -98,11 +98,25 @@ def tip_selector(key: str) -> str:
     return TIP_LABELS[label]
 
 
+def year_range_selector(key: str):
+    """Selector de interval de ani (un an sau o perioadă). Citește anii din baza de date."""
+    row = conn.execute("SELECT MIN(an), MAX(an) FROM hcl_documente").fetchone()
+    lo, hi = int(row[0]), int(row[1])
+    if lo >= hi:
+        st.caption(f"An disponibil: {lo}")
+        return lo, hi
+    return st.slider(
+        "Interval ani:",
+        min_value=lo, max_value=hi, value=(lo, hi), step=1, key=key,
+    )
+
+
 tab_free, tab_topic = st.tabs(["Căutare liberă", "Căutare pe topic"])
 
 with tab_free:
     st.markdown("Caută direct în textul documentelor. Funcționează cu sau fără diacritice.")
     tip_free = tip_selector("tip_free")
+    an_min_f, an_max_f = year_range_selector("ani_free")
     query = st.text_input(
         "Termen de căutare:",
         placeholder="ex: Hala Laminor sau Eugen Matei",
@@ -110,7 +124,10 @@ with tab_free:
         key="free_query",
     )
     if query:
-        render_results(search_phrase(conn, query, tip=tip_free), prefix="free")
+        render_results(
+            search_phrase(conn, query, tip=tip_free, an_min=an_min_f, an_max=an_max_f),
+            prefix="free",
+        )
 
 def _norm(s: str) -> str:
     return s.strip().strip('"“”„').strip().lower()
@@ -119,6 +136,7 @@ def _norm(s: str) -> str:
 with tab_topic:
     st.markdown("Apasă un topic predefinit (include automat toate alias-urile) sau scrie liber.")
     tip_topic = tip_selector("tip_topic")
+    an_min_t, an_max_t = year_range_selector("ani_topic")
     cur = conn.execute("SELECT nume FROM topicuri ORDER BY nume")
     topics = [row[0] for row in cur.fetchall()]
 
@@ -138,7 +156,7 @@ with tab_topic:
         # Dacă textul corespunde unui topic cunoscut → căutare cu alias-uri; altfel liberă.
         match = next((t for t in topics if _norm(t) == _norm(tq)), None)
         if match:
-            results = search_topic(conn, match, tip=tip_topic)
+            results = search_topic(conn, match, tip=tip_topic, an_min=an_min_t, an_max=an_max_t)
         else:
-            results = search_phrase(conn, tq, tip=tip_topic)
+            results = search_phrase(conn, tq, tip=tip_topic, an_min=an_min_t, an_max=an_max_t)
         render_results(results, prefix="topic")
