@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+*.db-journal
+.pytest_cache/
+
+# Baza necomprimată (108 MB) NU merge în git — comităm doar hcl.db.gz (34 MB).
+# app.py o decomprimă automat la prima pornire.
+hcl.db
+
+# Artefacte de probă din testele inițiale ale API-ului
+doc_*.txt
+lista_*.json

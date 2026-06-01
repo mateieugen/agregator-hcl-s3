@@ -1,0 +1,30 @@
+- nume: Hala Laminor
+  aliasuri:
+    - laminor
+    - parc industrial
+    - Dudesti-Pantelimon
+    - Sos. Dudesti
+
+- nume: RADET
+  aliasuri:
+    - termoficare
+    - agent termic
+    - centrala termica
+    - energie termica
+
+- nume: Parcul IOR
+  aliasuri:
+    - IOR
+    - parc IOR
+    - Titan
+
+- nume: Pasajul Mihai Bravu
+  aliasuri:
+    - pasaj
+    - Mihai Bravu
+
+- nume: Buget local
+  aliasuri:
+    - rectificare bugetara
+    - bugetul local
+    - credite bugetare
