@@ -52,8 +52,10 @@ def extract_obiect(text: str, fallback: str = "") -> str:
     if m:
         chunk = _PREAMBUL_RE.split(m.group(1), maxsplit=1)[0]
         chunk = re.sub(r"\s+", " ", chunk).strip()
-        if len(chunk) > 350:
-            chunk = chunk[:350].rsplit(" ", 1)[0] + "…"
+        # Afișăm titlul integral. Plasă de siguranță doar dacă tăierea preambulului
+        # eșuează complet (ar rezulta un text uriaș).
+        if len(chunk) > 2000:
+            chunk = chunk[:2000].rsplit(" ", 1)[0] + "…"
         if chunk:
             return chunk
     return fallback
