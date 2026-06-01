@@ -105,23 +105,12 @@ def test_search_fts_bad_query_returns_empty(tmp_path):
     assert results == []
 
 
-def test_search_fts_ranks_title_matches_first(tmp_path):
-    # bm25 cu titlu ponderat ×10: potrivirea în titlu trebuie să urce peste cea din corp.
+def test_search_fts_reverse_chronological(tmp_path):
+    # Rezultatele apar invers cronologic: cel mai recent aprobat primul.
     conn = init_db(str(tmp_path / "test.db"))
-    upsert_doc(conn, _doc(2, "Reabilitare strada", "context despre laminor mentionat aici",
-                          data_adoptare="2026-03-01"))
-    upsert_doc(conn, _doc(1, "Hala Laminor", "alt continut",
-                          data_adoptare="2026-01-01"))
+    upsert_doc(conn, _doc(1, "Hala Laminor veche", "laminor", data_adoptare="2024-01-01"))
+    upsert_doc(conn, _doc(2, "Hala Laminor noua", "laminor", data_adoptare="2026-05-01"))
     conn.commit()
     results = search_fts(conn, "laminor")
-    assert results[0]["document_id"] == "1"  # titlu match primul
-
-
-def test_search_fts_ties_broken_by_recent_date(tmp_path):
-    # Relevanță egală (ambele au „laminor" în titlu) → cel mai recent primul.
-    conn = init_db(str(tmp_path / "test.db"))
-    upsert_doc(conn, _doc(2, "Hotarare laminor", "x", data_adoptare="2026-03-01"))
-    upsert_doc(conn, _doc(1, "Hotarare laminor", "x", data_adoptare="2026-01-01"))
-    conn.commit()
-    results = search_fts(conn, "laminor")
-    assert results[0]["document_id"] == "2"
+    assert results[0]["document_id"] == "2"  # cel mai recent primul
+    assert results[1]["document_id"] == "1"
