@@ -50,14 +50,15 @@ def test_search_topic_unknown_topic_uses_name(tmp_path):
     assert len(results) == 1
 
 
-def test_search_topic_results_ordered_by_date(tmp_path):
+def test_search_topic_ranks_by_relevance_then_recent(tmp_path):
+    # Relevanță egală pe ambele → cel mai recent primul (departajare după dată).
     conn = init_db(str(tmp_path / "test.db"))
     upsert_doc(conn, _doc(10, "Laminor martie", "laminor", "2026-03-01"))
     upsert_doc(conn, _doc(5,  "Laminor ianuarie", "laminor", "2026-01-01"))
     conn.commit()
     results = search_topic(conn, "laminor")
-    assert results[0]["document_id"] == "5"
-    assert results[1]["document_id"] == "10"
+    assert results[0]["document_id"] == "10"
+    assert results[1]["document_id"] == "5"
 
 
 def test_load_topics_from_yaml(tmp_path):

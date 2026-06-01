@@ -126,7 +126,7 @@ def search_fts(
             FROM hcl_fts
             JOIN hcl_documente d ON hcl_fts.rowid = d.id
             WHERE {where}
-            ORDER BY d.data_adoptare ASC
+            ORDER BY bm25(hcl_fts, 10.0, 1.0), d.data_adoptare DESC
             LIMIT ?
             """,
             params,
