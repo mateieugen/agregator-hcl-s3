@@ -75,7 +75,7 @@ def render_results(results: list, prefix: str) -> None:
             with st.spinner("Se încarcă documentul…"):
                 text = load_readable(doc_id)
             with st.container(border=True):
-                st.markdown(text or "_(text indisponibil)_")
+                st.markdown(text or "_(text indisponibil)_", unsafe_allow_html=True)
         if url:
             st.markdown(f"[📄 PDF oficial]({url})")
         st.divider()

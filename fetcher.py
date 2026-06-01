@@ -30,13 +30,15 @@ def strip_html(html: str) -> str:
 
 
 def html_to_readable(html: str) -> str:
-    """Convertește HTML-ul documentului în text lizibil, pe paragrafe (Markdown).
+    """Convertește HTML-ul documentului în HTML lizibil, cu rânduri strânse.
 
-    Păstrează structura din hcl.usr.ro: fiecare bloc (titlu, paragraf, element de
-    listă) pe rândul lui, listele „-" devin bullet-uri.
+    Păstrează structura din hcl.usr.ro (titlu, paragraf, element de listă), fiecare
+    pe rândul lui, dar cu spațiere verticală mică între rânduri.
     """
     if not html:
         return ""
+    from html import escape
+
     soup = BeautifulSoup(html, "html.parser")
     blocks = []
     for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "p", "li", "tr"]):
@@ -47,8 +49,9 @@ def html_to_readable(html: str) -> str:
         if len(txt) <= 2 and not txt[0].isalpha():
             continue
         if txt.startswith("-"):
-            txt = "- " + txt.lstrip("-").strip()  # bullet curat
-        blocks.append(txt)
+            txt = "– " + txt.lstrip("-").strip()
+        blocks.append(escape(txt))
     if not blocks:
-        return soup.get_text("\n", strip=True)
-    return "\n\n".join(blocks)
+        blocks = [escape(l) for l in soup.get_text("\n", strip=True).splitlines() if l.strip()]
+    rows = "".join(f'<div style="margin:0 0 4px 0">{b}</div>' for b in blocks)
+    return f'<div style="line-height:1.35">{rows}</div>'
