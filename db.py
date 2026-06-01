@@ -9,8 +9,18 @@ _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 # preambul („Consiliul Local...", „Având în vedere...", etc.). Pentru ședințe
 # extragem antetul procesului-verbal.
 _OBIECT_RE = re.compile(r"HOT[ĂA]R[ÂA]RE\s+(privind\b.+)", re.IGNORECASE | re.DOTALL)
+# Începutul preambulului (oprim titlul aici). Tolerăm erori OCR la „Consiliul"
+# (apare adesea „Consiliu]", „Consiliu1") și prindem și ancorele ulterioare.
 _PREAMBUL_RE = re.compile(
-    r"\s+(?:Consiliul Local|În temeiul|Având în vedere|Analizând|Luând în)",
+    r"\s+(?:"
+    r"Consiliu.{0,2}\s+Local\s+al\s+Sectorului\s+3\s+al\s+Municipiului"
+    r"|ales\s+[îi]n\s+condi[țt]iile\s+stabilite"
+    r"|[îi]ntrunit\s+[îi]n\s+[șs]edin[țt]"
+    r"|[ÎIî]n\s+temeiul"
+    r"|Av[âa]nd\s+[îi]n\s+vedere"
+    r"|Analiz[âa]nd"
+    r"|Lu[âa]nd\s+[îi]n\s+considerare"
+    r")",
     re.IGNORECASE,
 )
 # Un proces-verbal real ÎNCEPE cu „PROCESUL VERBAL al ședinței ..." (în antet).
