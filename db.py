@@ -122,7 +122,7 @@ def search_fts(
         cur = conn.execute(
             f"""
             SELECT d.document_id, d.numar_hcl, d.data_adoptare,
-                   d.titlu, d.obiect, d.tip_doc, d.text_complet, d.url_original, d.an
+                   d.titlu, d.obiect, d.tip_doc, d.url_original, d.an
             FROM hcl_fts
             JOIN hcl_documente d ON hcl_fts.rowid = d.id
             WHERE {where}
@@ -135,6 +135,15 @@ def search_fts(
         return [dict(zip(cols, row)) for row in cur.fetchall()]
     except sqlite3.OperationalError:
         return []
+
+
+def get_text(conn: sqlite3.Connection, document_id: str) -> str:
+    """Aduce textul integral al unui singur document (pentru previzualizare la cerere)."""
+    cur = conn.execute(
+        "SELECT text_complet FROM hcl_documente WHERE document_id = ?", (document_id,)
+    )
+    row = cur.fetchone()
+    return (row[0] if row else "") or ""
 
 
 def search_topic(

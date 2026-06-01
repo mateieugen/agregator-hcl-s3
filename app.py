@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 import streamlit as st
-from db import init_db, search_fts, search_topic
+from db import init_db, search_fts, search_topic, get_text
 
 DB_PATH = "hcl.db"
 DB_GZ_PATH = "hcl.db.gz"
@@ -40,23 +40,36 @@ conn = get_conn()
 TIP_LABELS = {"Hotărâri (HCL)": "HCL", "Procese-verbale": "PV"}
 
 
-def render_results(results: list) -> None:
+def render_results(results: list, prefix: str) -> None:
     if not results:
         st.info("Niciun rezultat.")
         return
     st.success(f"{len(results)} documente găsite")
     for r in results:
+        doc_id = r.get("document_id", "")
         url    = r.get("url_original") or ""
         data   = r.get("data_adoptare", "")
         nr     = r.get("numar_hcl", "")
         an     = r.get("an", "")
         titlu  = r.get("obiect") or r.get("titlu") or "—"
-        text   = r.get("text_complet") or ""
         eticheta = f"HCL nr. {nr}/{an}" if r.get("tip_doc") == "HCL" else "Proces-verbal"
         st.markdown(f"**{titlu}**")
         st.caption(f"{eticheta} &nbsp;·&nbsp; `{data}`")
-        with st.expander("👁 Previzualizare text"):
-            st.write(text or "_(text indisponibil)_")
+
+        # Previzualizare „lazy": textul integral se aduce doar la click, doar pentru
+        # documentul ales — ca să nu încărcăm pagina cu textul tuturor rezultatelor.
+        state_key = f"show_{prefix}_{doc_id}"
+        if st.button("👁 Previzualizare text", key=f"btn_{prefix}_{doc_id}"):
+            st.session_state[state_key] = not st.session_state.get(state_key, False)
+        if st.session_state.get(state_key):
+            text = get_text(conn, doc_id)
+            st.text_area(
+                "Text document",
+                text or "(text indisponibil)",
+                height=320,
+                key=f"ta_{prefix}_{doc_id}",
+                label_visibility="collapsed",
+            )
         if url:
             st.markdown(f"[📄 PDF oficial]({url})")
         st.divider()
@@ -83,7 +96,7 @@ with tab_free:
         key="free_query",
     )
     if query:
-        render_results(search_fts(conn, query, tip=tip_free))
+        render_results(search_fts(conn, query, tip=tip_free), prefix="free")
 
 with tab_topic:
     st.markdown("Alege un topic predefinit — căutarea include automat toate alias-urile.")
@@ -97,4 +110,4 @@ with tab_topic:
     else:
         topic = st.selectbox("Topic:", topics)
         if topic:
-            render_results(search_topic(conn, topic, tip=tip_topic))
+            render_results(search_topic(conn, topic, tip=tip_topic), prefix="topic")
