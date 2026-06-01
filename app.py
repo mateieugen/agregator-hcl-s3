@@ -67,8 +67,7 @@ def render_results(results: list, prefix: str) -> None:
         an     = r.get("an", "")
         titlu  = r.get("obiect") or r.get("titlu") or "—"
         eticheta = f"HCL nr. {nr}/{an}" if r.get("tip_doc") == "HCL" else "Proces-verbal"
-        st.markdown(f"**{titlu}**")
-        st.caption(f"{eticheta} &nbsp;·&nbsp; `{data}`")
+        st.markdown(f"**{eticheta}** &nbsp;·&nbsp; {data} &nbsp;—&nbsp; {titlu}")
 
         # Previzualizare „lazy": textul integral se aduce doar la click, doar pentru
         # documentul ales — ca să nu încărcăm pagina cu textul tuturor rezultatelor.

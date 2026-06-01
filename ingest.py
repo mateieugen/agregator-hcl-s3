@@ -1,3 +1,7 @@
+import datetime
+import gzip
+import os
+import shutil
 import sys
 import time
 import sqlite3
@@ -5,10 +9,22 @@ from db import init_db, upsert_doc, load_topics, extract_obiect, classify_doc
 from fetcher import get_doc_list, get_doc_text
 
 ENTITY      = "4420465"
-YEARS       = [2024, 2025, 2026]
+# Public: 2024 → anul curent. Se extinde singur la trecerea în noul an.
+START_YEAR  = 2024
+YEARS       = list(range(START_YEAR, datetime.date.today().year + 1))
 DB_PATH     = "hcl.db"
+DB_GZ_PATH  = "hcl.db.gz"
 TOPICS_PATH = "topics.yaml"
 RATE_LIMIT_S = 0.3
+
+
+def _restore_from_gz() -> None:
+    """Pornește din arhiva existentă, ca să adăugăm doar documentele noi."""
+    if os.path.exists(DB_PATH) or not os.path.exists(DB_GZ_PATH):
+        return
+    with gzip.open(DB_GZ_PATH, "rb") as fin, open(DB_PATH, "wb") as fout:
+        shutil.copyfileobj(fin, fout)
+    print(f"[init] {DB_PATH} restaurat din {DB_GZ_PATH}")
 
 
 def already_fetched(conn: sqlite3.Connection, document_id: str) -> bool:
@@ -19,6 +35,7 @@ def already_fetched(conn: sqlite3.Connection, document_id: str) -> bool:
 
 
 def main() -> None:
+    _restore_from_gz()
     conn = init_db(DB_PATH)
 
     try:
