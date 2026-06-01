@@ -34,6 +34,59 @@ def already_fetched(conn: sqlite3.Connection, document_id: str) -> bool:
     return cur.fetchone() is not None
 
 
+def _store_decision(conn, dec: dict, year: int, retries: int = 2) -> bool:
+    """Descarcă și salvează un document, cu reîncercări la eroare/timeout."""
+    doc_id = dec.get("DocumentID")
+    for attempt in range(retries + 1):
+        try:
+            text = get_doc_text(doc_id)
+            upsert_doc(conn, {
+                "document_id":  str(doc_id),
+                "an":           year,
+                "numar_hcl":    str(dec["Number"]),
+                "data_adoptare": dec["DecisionDate"],
+                "titlu":        dec["Title"],
+                "obiect":       extract_obiect(text, fallback=dec["Title"]),
+                "tip_doc":      classify_doc(text, dec["Title"]),
+                "text_complet": text,
+                "url_original": dec.get("LinkExternal") or "",
+            })
+            conn.commit()
+            return True
+        except Exception as e:
+            if attempt < retries:
+                time.sleep(2)
+            else:
+                _safe_print(f"  [ERR] {doc_id}: {e}", err=True)
+                return False
+
+
+def _heal(conn) -> None:
+    """Auto-vindecare: verifică acoperirea față de API și recuperează ce lipsește.
+
+    Prinde documentele ratate dintr-un timeout pasager (s-ar fi pierdut în tăcere).
+    """
+    print("\n[heal] verific acoperirea față de API...")
+    healed = still = 0
+    for year in YEARS:
+        try:
+            decisions = get_doc_list(ENTITY, year)
+        except Exception as e:
+            print(f"[heal] {year} ERROR la listă: {e}", file=sys.stderr)
+            continue
+        by_id = {str(d["DocumentID"]): d for d in decisions if d.get("DocumentID")}
+        db_ids = {r[0] for r in
+                  conn.execute("SELECT document_id FROM hcl_documente WHERE an=?", (year,))}
+        for did in set(by_id) - db_ids:
+            if _store_decision(conn, by_id[did], year):
+                healed += 1
+                _safe_print(f"  [HEAL] {did} recuperat")
+                time.sleep(RATE_LIMIT_S)
+            else:
+                still += 1
+    print(f"[heal] recuperate={healed}  încă lipsă={still}")
+
+
 def main() -> None:
     _restore_from_gz()
     conn = init_db(DB_PATH)
@@ -64,28 +117,17 @@ def main() -> None:
                 total_skip += 1
                 continue
 
-            try:
-                text = get_doc_text(doc_id)
-                upsert_doc(conn, {
-                    "document_id":  str(doc_id),
-                    "an":           year,
-                    "numar_hcl":    str(dec["Number"]),
-                    "data_adoptare": dec["DecisionDate"],
-                    "titlu":        dec["Title"],
-                    "obiect":       extract_obiect(text, fallback=dec["Title"]),
-                    "tip_doc":      classify_doc(text, dec["Title"]),
-                    "text_complet": text,
-                    "url_original": dec.get("LinkExternal") or "",
-                })
-                conn.commit()
+            if _store_decision(conn, dec, year):
                 total_new += 1
                 _safe_print(f"  [OK] {doc_id}: {dec['Title'][:60]}")
                 time.sleep(RATE_LIMIT_S)
-            except Exception as e:
+            else:
                 total_err += 1
-                _safe_print(f"  [ERR] {doc_id}: {e}", err=True)
 
     print(f"\nDone. new={total_new}  skipped={total_skip}  errors={total_err}")
+
+    _heal(conn)  # recuperează automat orice a rămas lipsă
+
     _write_gz()
     conn.close()
 
