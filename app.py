@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 import streamlit as st
-from db import init_db, search_fts, search_topic
+from db import init_db, search_phrase, search_topic, load_topics
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
@@ -42,6 +42,10 @@ def get_conn():
     from db import backfill_obiect
     conn = init_db(DB_PATH)
     backfill_obiect(conn)  # populează obiect/tip_doc dacă lipsesc (baze vechi)
+    try:
+        load_topics(conn, "topics.yaml")  # topics.yaml = sursa de adevăr la fiecare pornire
+    except FileNotFoundError:
+        pass
     return conn
 
 
@@ -102,11 +106,12 @@ with tab_free:
     tip_free = tip_selector("tip_free")
     query = st.text_input(
         "Termen de căutare:",
-        placeholder='ex: "Hala Laminor" sau termoficare',
+        placeholder="ex: Hala Laminor sau Eugen Matei",
+        help="Caută expresia exactă (cuvintele în ordine, alăturate).",
         key="free_query",
     )
     if query:
-        render_results(search_fts(conn, query, tip=tip_free), prefix="free")
+        render_results(search_phrase(conn, query, tip=tip_free), prefix="free")
 
 def _norm(s: str) -> str:
     return s.strip().strip('"“”„').strip().lower()
@@ -136,5 +141,5 @@ with tab_topic:
         if match:
             results = search_topic(conn, match, tip=tip_topic)
         else:
-            results = search_fts(conn, tq, tip=tip_topic)
+            results = search_phrase(conn, tq, tip=tip_topic)
         render_results(results, prefix="topic")

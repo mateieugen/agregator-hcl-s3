@@ -137,6 +137,21 @@ def search_fts(
         return []
 
 
+def search_phrase(
+    conn: sqlite3.Connection, text: str, limit: int = 50, tip: str = "HCL"
+) -> list:
+    """Caută textul ca frază exactă (cuvintele lipite, în ordine).
+
+    Ex.: „eugen matei" găsește doar documentele unde apare chiar numele, nu cele
+    care conțin „eugen" și „matei" separat, referitor la alte persoane.
+    """
+    cleaned = text.strip().strip('"“”„').strip()
+    if not cleaned:
+        return []
+    phrase = '"' + cleaned.replace('"', '""') + '"'
+    return search_fts(conn, phrase, limit, tip=tip)
+
+
 def get_text(conn: sqlite3.Connection, document_id: str) -> str:
     """Aduce textul integral al unui singur document (pentru previzualizare la cerere)."""
     cur = conn.execute(
