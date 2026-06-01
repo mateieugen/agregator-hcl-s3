@@ -3,7 +3,17 @@ import shutil
 from pathlib import Path
 
 import streamlit as st
-from db import init_db, search_fts, search_topic, get_text
+from db import init_db, search_fts, search_topic
+
+
+@st.cache_data(show_spinner=False, max_entries=64)
+def load_readable(document_id: str) -> str:
+    """Aduce documentul live de la hcl.usr.ro și-l formatează lizibil (cache pe sesiune)."""
+    from fetcher import get_doc_html, html_to_readable
+    try:
+        return html_to_readable(get_doc_html(document_id))
+    except Exception:
+        return ""
 
 DB_PATH = "hcl.db"
 DB_GZ_PATH = "hcl.db.gz"
@@ -62,14 +72,10 @@ def render_results(results: list, prefix: str) -> None:
         if st.button("👁 Previzualizare text", key=f"btn_{prefix}_{doc_id}"):
             st.session_state[state_key] = not st.session_state.get(state_key, False)
         if st.session_state.get(state_key):
-            text = get_text(conn, doc_id)
-            st.text_area(
-                "Text document",
-                text or "(text indisponibil)",
-                height=320,
-                key=f"ta_{prefix}_{doc_id}",
-                label_visibility="collapsed",
-            )
+            with st.spinner("Se încarcă documentul…"):
+                text = load_readable(doc_id)
+            with st.container(border=True):
+                st.markdown(text or "_(text indisponibil)_")
         if url:
             st.markdown(f"[📄 PDF oficial]({url})")
         st.divider()
