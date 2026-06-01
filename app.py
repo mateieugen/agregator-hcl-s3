@@ -104,22 +104,33 @@ with tab_free:
     if query:
         render_results(search_fts(conn, query, tip=tip_free), prefix="free")
 
+def _norm(s: str) -> str:
+    return s.strip().strip('"“”„').strip().lower()
+
+
 with tab_topic:
-    st.markdown("Alege un topic predefinit din listă — căutarea include automat toate alias-urile.")
-    st.caption('Pentru o frază proprie (ex: cu ghilimele), folosește tab-ul **„Căutare liberă"**.')
+    st.markdown("Apasă un topic predefinit (include automat toate alias-urile) sau scrie liber.")
     tip_topic = tip_selector("tip_topic")
     cur = conn.execute("SELECT nume FROM topicuri ORDER BY nume")
     topics = [row[0] for row in cur.fetchall()]
-    if not topics:
-        st.warning(
-            "Niciun topic definit. Adaugă în `topics.yaml` și rulează `python ingest.py`."
-        )
-    else:
-        topic = st.selectbox(
-            "Alege un topic:",
-            topics,
-            index=None,
-            placeholder="— alege un topic din listă —",
-        )
-        if topic:
-            render_results(search_topic(conn, topic, tip=tip_topic), prefix="topic")
+
+    # Butoane rapide pentru topicurile predefinite — la click umplu câmpul de mai jos.
+    if topics:
+        cols = st.columns(len(topics))
+        for c, t in zip(cols, topics):
+            if c.button(t, key=f"chip_{t}", use_container_width=True):
+                st.session_state["topic_query"] = t
+
+    tq = st.text_input(
+        "Topic sau termen:",
+        key="topic_query",
+        placeholder="ex: Hala Laminor",
+    )
+    if tq:
+        # Dacă textul corespunde unui topic cunoscut → căutare cu alias-uri; altfel liberă.
+        match = next((t for t in topics if _norm(t) == _norm(tq)), None)
+        if match:
+            results = search_topic(conn, match, tip=tip_topic)
+        else:
+            results = search_fts(conn, tq, tip=tip_topic)
+        render_results(results, prefix="topic")
