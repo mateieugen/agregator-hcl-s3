@@ -1,0 +1,45 @@
+name: Actualizare automată HCL
+
+# Rulează zilnic + manual (din tab-ul Actions, butonul „Run workflow").
+on:
+  schedule:
+    - cron: "0 5 * * *"      # zilnic la 05:00 UTC (08:00 ora României)
+  workflow_dispatch:
+
+permissions:
+  contents: write             # ca să poată face commit + push la hcl.db.gz
+
+concurrency:
+  group: actualizare-hcl
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalează dependențele
+        run: pip install requests beautifulsoup4 pyyaml
+
+      - name: Descarcă HCL-urile noi (incremental)
+        run: python ingest.py
+
+      - name: Commit & push dacă s-au adăugat documente
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain hcl.db.gz)" ]; then
+            git add hcl.db.gz
+            git commit -m "data: actualizare automată HCL ($(date +%F))"
+            git push
+            echo "Arhivă actualizată și împinsă."
+          else
+            echo "Niciun document nou — nimic de actualizat."
+          fi
