@@ -57,8 +57,8 @@ def render_results(results: list) -> None:
         st.caption(f"{eticheta} &nbsp;·&nbsp; `{data}`")
         with st.expander("👁 Previzualizare text"):
             st.write(text or "_(text indisponibil)_")
-            if url:
-                st.markdown(f"[📄 PDF oficial]({url})")
+        if url:
+            st.markdown(f"[📄 PDF oficial]({url})")
         st.divider()
 
 
