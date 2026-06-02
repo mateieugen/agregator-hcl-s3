@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 from db import init_db, search_phrase, search_topic, load_topics
 
-DRIVE_URL = "https://drive.google.com/uc?id=1CoVQTDiXvfau1mk3YO1I7BWm38mvDCOb&export=download"
+DRIVE_URL = "https://drive.google.com/uc?id=15jtwTKcf-BZ5ki_8ea96BvYXAmk48y4N&export=download"
 
 @st.cache_data(show_spinner=False, max_entries=64)
 def load_readable(document_id: str, pv: bool = False) -> str:
