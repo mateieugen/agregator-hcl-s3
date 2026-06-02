@@ -5,6 +5,7 @@ from pathlib import Path
 import streamlit as st
 from db import init_db, search_phrase, search_topic, load_topics
 
+DRIVE_URL = "https://drive.google.com/uc?id=1CoVQTDiXvfau1mk3YO1I7BWm38mvDCOb&export=download"
 
 @st.cache_data(show_spinner=False, max_entries=64)
 def load_readable(document_id: str, pv: bool = False) -> str:
@@ -19,12 +20,33 @@ DB_PATH = "hcl.db"
 DB_GZ_PATH = "hcl.db.gz"
 
 
+def _download_from_drive(url: str, dest: str) -> bool:
+    """Descarcă hcl.db.gz din Google Drive. Întoarce True dacă reușit."""
+    import requests
+    try:
+        with st.spinner("⬇️ Descarcă arhiva din Google Drive..."):
+            resp = requests.get(url, timeout=120, stream=True)
+            resp.raise_for_status()
+            with open(dest, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        return True
+    except Exception as e:
+        st.error(f"Eroare download: {e}")
+        return False
+
+
 def ensure_db() -> None:
-    """Pe Streamlit Cloud repo conține doar hcl.db.gz — decomprimăm la prima pornire."""
+    """Descarcă hcl.db.gz din Google Drive dacă lipsă, apoi decomprimă la hcl.db."""
     if Path(DB_PATH).exists():
         return
-    if Path(DB_GZ_PATH).exists():
-        with gzip.open(DB_GZ_PATH, "rb") as fin, open(DB_PATH, "wb") as fout:
+    if not Path(DB_GZ_PATH).exists():
+        if not _download_from_drive(DRIVE_URL, DB_GZ_PATH):
+            st.error("Nu pot descărca baza de date. Verific conexiunea...")
+            st.stop()
+    with gzip.open(DB_GZ_PATH, "rb") as fin, open(DB_PATH, "wb") as fout:
+        with st.spinner("📦 Decomprimă arhiva..."):
             shutil.copyfileobj(fin, fout)
 
 st.set_page_config(
